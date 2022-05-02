@@ -16,7 +16,7 @@ public class Cst438GradebookApplication  {
 		// delay for 1 minute to allow time for Docker compose to start database service.
 		// Thread.sleep(60000); 
 	   	// System.out.println("Test Commit");
-		// System.out.println("Test pull");
+		// System.out.println("Test pull!");
 		SpringApplication.run(Cst438GradebookApplication.class, args);
 	}
 	
