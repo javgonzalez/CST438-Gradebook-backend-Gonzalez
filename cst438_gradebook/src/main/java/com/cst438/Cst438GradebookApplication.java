@@ -15,6 +15,7 @@ public class Cst438GradebookApplication  {
 	public static void main(String[] args) throws InterruptedException {
 		// delay for 1 minute to allow time for Docker compose to start database service.
 		// Thread.sleep(60000); 
+	   System.out.println("Test Commit");
 		SpringApplication.run(Cst438GradebookApplication.class, args);
 	}
 	
