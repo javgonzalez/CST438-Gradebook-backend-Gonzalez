@@ -1,12 +1,17 @@
 package com.cst438.controllers;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cst438.domain.Assignment;
 import com.cst438.domain.AssignmentListDTO;
+import com.cst438.domain.AssignmentListDTO.AssignmentDTO;
 import com.cst438.domain.AssignmentGrade;
 import com.cst438.domain.AssignmentGradeRepository;
 import com.cst438.domain.AssignmentRepository;
@@ -169,5 +175,139 @@ public class GradeBookController {
 		
 		return assignment;
 	}
+	
+	/*
+	 * Method used to add an assignment which includes its name and due date
+	 */
+	 @PostMapping("/assignment")
+	 @Transactional
+	 public AssignmentListDTO.AssignmentDTO addAssignment(@RequestBody AssignmentListDTO.AssignmentDTO assignmentDTO) {
+	    // for debugging purposes 
+	    System.out.println("Course ID = " + assignmentDTO.courseId);
+	    
+	    // check that this request is from the course instructor 
+	    String email = "dwisneski@csumb.edu";  // user name (should be instructor's email)
+	    
+	    // get course
+	    Course course = courseRepository.findByCourseId(assignmentDTO.courseId);
+       // check to see if course_id is valid    
+       if (course == null) {
+          throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Course not found!");
+       }
+	    
+       // check to see assignmentDTO has valid user (instructor), name, and due date
+	    checkNewAssignment(assignmentDTO, course, email);
+	    
+	    // set Date fields
+       Date dueDate;
+	    Date currentDate = new Date();
+	    try {
+	        dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(assignmentDTO.dueDate);
+	      } catch (ParseException e) {
+	         e.printStackTrace();
+	         throw new ResponseStatusException( HttpStatus.BAD_REQUEST, "Due date not formatted correctly!");
+	      }
+	    // create sqlDate variable for DB
+	    java.sql.Date sqlDate = new java.sql.Date(dueDate.getTime());
+	    
+	    // check to see if assignment is overdue and needs grading (1 = Yes, 0 = No)
+	    int gradingNeeded = (dueDate.before(currentDate)) ? 1 : 0;
+	        
+	    // create new Assignment entity
+	    Assignment assignment = new Assignment();
+	    assignment.setCourse(course);
+	    assignment.setName(assignmentDTO.assignmentName);
+	    assignment.setDueDate(sqlDate); 
+	    assignment.setNeedsGrading(gradingNeeded); 
+	    
+	    // save to DB
+	    Assignment savedAssignment = assignmentRepository.save(assignment);
+	    
+	    // build AssignmentListDTO.AssignmentDTO object from Assignment entity
+	    AssignmentListDTO.AssignmentDTO result = createAssignmentDTO(savedAssignment);  
+	    
+	    return result;
+	 }
 
+    /*
+     * Method used to update name of assignment
+     */
+	 @PutMapping("/assignment/{id}")
+	 @Transactional
+	 public AssignmentListDTO.AssignmentDTO updateAssignment(@RequestBody AssignmentListDTO.AssignmentDTO assignmentDTO, @PathVariable("id") Integer assignmentId) {
+	    String email = "dwisneski@csumb.edu";  // user name (should be instructor's email)   
+	    
+	    // create assignment entity
+	    Assignment assignment =  checkAssignment(assignmentId, email);
+      
+	    // update assignment name
+	    assignment.setName(assignmentDTO.assignmentName);
+	    
+	    // save to DB
+       Assignment savedAssignment = assignmentRepository.save(assignment);
+	    
+       // build AssignmentListDTO.AssignmentDTO object from Assignment entity
+       AssignmentListDTO.AssignmentDTO result = createAssignmentDTO(savedAssignment);  
+       
+       return result;
+	 }
+
+    /*
+     * Method used to delete an assignment in the course (only if there are no
+     * grades for the assignment)
+     */
+	 @DeleteMapping("/assignment/{id}")
+	 @Transactional
+	 public void deleteAssignment(@PathVariable("id") Integer assignmentId) {
+	    String email = "dwisneski@csumb.edu";  // user name (should be instructor's email)   
+       
+       // create assignment entity
+       Assignment assignment =  checkAssignment(assignmentId, email);
+       // collect graded assignments
+       List<AssignmentGrade> gradedAssignments = assignmentGradeRepository.findAllByAssignmentId(assignmentId);
+       // can only delete if assignment has no grades
+       if (!gradedAssignments.isEmpty()) {
+          throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete assignment with grades!");
+       } else {
+         assignmentRepository.delete(assignment);
+      }
+      
+	 }
+	 
+	 // Helper method to build AssignmentDTO object 
+	 private AssignmentListDTO.AssignmentDTO createAssignmentDTO(Assignment a) {
+	    AssignmentListDTO.AssignmentDTO assignmentDTO = new AssignmentListDTO.AssignmentDTO();
+	    assignmentDTO.assignmentId = a.getId();
+	    assignmentDTO.assignmentName = a.getName();
+	    assignmentDTO.dueDate = a.getDueDate().toString();
+	    assignmentDTO.courseTitle = a.getCourse().getTitle();
+	    assignmentDTO.courseId = a.getCourse().getCourse_id();
+	    return assignmentDTO;
+   }
+
+   // Helper method used to see if assignmentDTO has valid assignment name and due date
+	 private void checkNewAssignment(AssignmentDTO assignment, Course course, String instructor) {  
+	    // checks that user is the course instructor
+       if (!course.getInstructor().equals(instructor)) {
+          throw new ResponseStatusException( HttpStatus.UNAUTHORIZED, "Not Authorized. " );
+       }  
+	    // checks to see if assignmentDTO data was passed 
+	    if (assignment == null) {
+	       throw new ResponseStatusException( HttpStatus.BAD_REQUEST, "No assignment data passed!");
+	    }
+	    // checks to see if assignment name is valid 
+	    if (assignment.assignmentName == null || assignment.assignmentName.trim().isEmpty()) {
+	       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "MIssing assignment name!");
+      }
+	    // checks to see if due date is valid 
+	    if (assignment.dueDate == null || assignment.dueDate.trim().isEmpty()) {
+         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing assignment due date!");
+      }
+	     
+	 }
+	
 }
+
+
+
+
