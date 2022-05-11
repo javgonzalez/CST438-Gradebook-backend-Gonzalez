@@ -268,10 +268,20 @@ public class JunitTestGradebook {
       course.setAssignments(new java.util.ArrayList<Assignment>());
 
       String assignmentName = "Test Assignment";
+      
+      Assignment assignment = new Assignment();
+      assignment.setCourse(course);
+      course.getAssignments().add(assignment);
+      // set dueDate to 1 week before now.
+      assignment.setDueDate(new java.sql.Date(System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000));
+      assignment.setId(1);
+      assignment.setName(TEST_ASSIGNMENT_NAME);
+      assignment.setNeedsGrading(1);
 
       // given -- stubs for database repositories that return test data
       given(courseRepository.findByCourseId(TEST_COURSE_ID)).willReturn(course);
-
+      given(assignmentRepository.findById(1)).willReturn(Optional.of(assignment));
+      given(assignmentRepository.save(any(Assignment.class))).willReturn(assignment);
       // end of mock data
 
       // create AssignmentDTO       
@@ -300,23 +310,18 @@ public class JunitTestGradebook {
       verify(assignmentRepository).save(any(Assignment.class));
 
       // do http GET to see new assignment 
-      response = mvc
-            .perform(MockMvcRequestBuilders.get("/gradebook/1").accept(MediaType.APPLICATION_JSON)).andReturn().getResponse();
-
+      response = mvc.perform(
+            MockMvcRequestBuilders
+               .get("/assignment/1")
+               .accept(MediaType.APPLICATION_JSON))
+            .andReturn().getResponse();
       // verify that return status = OK (value 200)
       assertEquals(200, response.getStatus()); 
 
       // verify that returned data contains the added assignment  
-      AssignmentListDTO assignmentDTO = fromJsonString(response.getContentAsString(), AssignmentListDTO.class);
+      AssignmentListDTO.AssignmentDTO assignmentDTO = fromJsonString(response.getContentAsString(), AssignmentListDTO.AssignmentDTO.class);
 
-      boolean found = false;
-      for (AssignmentListDTO.AssignmentDTO a : assignmentDTO.assignments) {
-         if (a.assignmentId == TEST_COURSE_ID) {
-            found = true;
-         }
-      }
-
-      assertTrue(found,"Assignment was not added");
+      assertEquals(TEST_COURSE_ID, assignmentDTO.courseId);
 
    }
 
@@ -350,7 +355,7 @@ public class JunitTestGradebook {
 
       // given -- stubs for database repositories that return test data
       given(assignmentRepository.findById(1)).willReturn(Optional.of(assignment));
-      given(courseRepository.findByCourseId(TEST_COURSE_ID)).willReturn(course);
+      given(assignmentRepository.save(any(Assignment.class))).willReturn(assignment);;
 
       // end of mock data
 
@@ -368,7 +373,12 @@ public class JunitTestGradebook {
 
       // verify that return status = OK (value 200)
       assertEquals(200, response.getStatus());
-
+      // verify that repository save method was called
+      verify(assignmentRepository).save(any(Assignment.class));
+      
+      // check name has been updated
+      AssignmentListDTO.AssignmentDTO result = fromJsonString(response.getContentAsString(), AssignmentListDTO.AssignmentDTO.class);
+      assertEquals(updatedName, result.assignmentName);
    }
 
    /*

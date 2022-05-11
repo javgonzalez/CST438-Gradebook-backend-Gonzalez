@@ -273,6 +273,24 @@ public class GradeBookController {
       }
 
    }
+   
+   /*
+    * Method used to get assignment by its id
+    */
+   @GetMapping("/assignment/{id}")
+   @Transactional
+   public AssignmentListDTO.AssignmentDTO getAssignment(@PathVariable("id") int assignmentId) {
+      // create Assignment entity 
+      Assignment assignment = assignmentRepository.findById(assignmentId).orElse(null);
+      if (assignment == null) {
+         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Assignment not found " + assignmentId);
+      }
+      
+      // build AssignmentListDTO.AssignmentDTO object from Assignment entity
+      AssignmentListDTO.AssignmentDTO result = createAssignmentDTO(assignment); 
+      return result;
+         
+   }
 
    // Helper method to build AssignmentDTO object 
    private AssignmentListDTO.AssignmentDTO createAssignmentDTO(Assignment a) {
