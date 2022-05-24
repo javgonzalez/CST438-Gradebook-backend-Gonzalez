@@ -31,9 +31,15 @@ public class EnrollmentController {
 	@Transactional
 	public EnrollmentDTO addEnrollment(@RequestBody EnrollmentDTO enrollmentDTO) {
 		
-		//TODO  complete this method in homework 4
-		
-		return null;
+		// create  enrollment entity from enrollmentDTO
+	   Enrollment enrollment = new Enrollment();
+	   enrollment.setStudentName(enrollmentDTO.studentName);
+	   enrollment.setStudentEmail(enrollmentDTO.studentEmail);
+	   enrollment.setCourse(courseRepository.findByCourseId(enrollmentDTO.course_id));
+	   
+	   // save to db
+	   enrollmentRepository.save(enrollment);
+		return enrollmentDTO;
 		
 	}
 
