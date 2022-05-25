@@ -64,7 +64,7 @@ public class GradeBookController {
    }
 
    @GetMapping("/gradebook/{id}")
-   public GradebookDTO getGradebook(@PathVariable("id") Integer assignmentId  ) {
+   public GradebookDTO getGradebook(@PathVariable("id") Integer assignmentId) {
 
       String email = "dwisneski@csumb.edu";  // user name (should be instructor's email) 
       Assignment assignment = checkAssignment(assignmentId, email);
@@ -101,7 +101,7 @@ public class GradeBookController {
       System.out.println("Gradebook - calcFinalGrades for course " + course_id);
 
       // check that this request is from the course instructor 
-      String email = "dwisneski@csumb.edu";  // user name (should be instructor's email) 
+      String email = "jjolley@csumb.edu";  // user name (should be instructor's email) 
 
       Course c = courseRepository.findById(course_id).orElse(null);
       if (!c.getInstructor().equals(email)) {
@@ -315,7 +315,7 @@ public class GradeBookController {
       }
       // checks to see if assignment name is valid 
       if (assignment.assignmentName == null || assignment.assignmentName.trim().isEmpty()) {
-         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "MIssing assignment name!");
+         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing assignment name!");
       }
       // checks to see if due date is valid 
       if (assignment.dueDate == null || assignment.dueDate.trim().isEmpty()) {
