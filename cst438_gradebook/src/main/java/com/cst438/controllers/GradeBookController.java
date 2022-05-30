@@ -33,7 +33,7 @@ import com.cst438.domain.Enrollment;
 import com.cst438.domain.GradebookDTO;
 import com.cst438.services.RegistrationService;
 
-@RestController
+@RestController 
 @CrossOrigin(origins = {"http://localhost:3000","https://cst438gradebook-front-end.herokuapp.com/"})
 public class GradeBookController {
 
@@ -321,6 +321,7 @@ public class GradeBookController {
       if (assignment.dueDate == null || assignment.dueDate.trim().isEmpty()) {
          throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing assignment due date!");
       }
+      //testing build
 
    }
 
